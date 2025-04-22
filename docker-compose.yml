@@ -1,0 +1,33 @@
+version: '3'
+
+services:
+  zap:
+    image: owasp/zap2docker-stable
+    container_name: zap-mcp
+    command: zap.sh -daemon -host 0.0.0.0 -port 8080 -config api.disablekey=true -config api.addrs.addr.name=.* -config api.addrs.addr.regex=true
+    ports:
+      - "8080:8080"  # ZAP proxy port
+      - "8090:8090"  # ZAP API port
+    volumes:
+      - ./zap-data:/home/zap/.ZAP/  # Persist ZAP data
+      - ./zap-scripts:/home/zap/scripts/  # Custom ZAP scripts
+    networks:
+      - zap-network
+    restart: unless-stopped
+
+  sqlmap:
+    image: paoloo/sqlmap
+    container_name: sqlmap
+    volumes:
+      - ./sqlmap-data:/root/.sqlmap/  # Persist SQLMap data
+      - ./sqlmap-output:/opt/sqlmap/output/  # SQLMap output directory
+    networks:
+      - zap-network
+    depends_on:
+      - zap
+    command: tail -f /dev/null  # Keep container running
+    restart: unless-stopped
+
+networks:
+  zap-network:
+    driver: bridge
